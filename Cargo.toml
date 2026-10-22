@@ -1,0 +1,12 @@
+[package]
+name = "sonic-core"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+fontdue = "0.9.5"
+# TLS for https:// — ring backend avoids needing cmake/nasm to build
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
+softbuffer = "0.4.8"
+webpki-roots = "0.26"
+winit = "0.30.13"
