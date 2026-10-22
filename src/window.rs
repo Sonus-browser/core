@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use softbuffer::{Context, Surface};
 use winit::application::ApplicationHandler;
-use winit::event::{ElementState, KeyEvent, WindowEvent};
+use winit::event::{ElementState, KeyEvent, WindowEvent, MouseScrollDelta};
 use winit::event_loop::{ActiveEventLoop, EventLoop};
 use winit::keyboard::{Key, NamedKey};
 use winit::window::{Window, WindowId};
@@ -18,6 +18,7 @@ struct App {
     font: fontdue::Font,
     window: Option<Rc<Window>>,
     surface: Option<Surface<Rc<Window>, Rc<Window>>>,
+    scroll: f32,
 }
 
 impl ApplicationHandler for App {
@@ -52,6 +53,19 @@ impl ApplicationHandler for App {
             // The OS asks us to draw (on startup, after a resize, ...)
             WindowEvent::RedrawRequested => self.paint(),
 
+            WindowEvent::MouseWheel { delta, .. } => {
+                let dy = match delta {
+                    MouseScrollDelta::LineDelta(_, y) => y * 40.0,   // mouse wheel: counted in "lines"
+                    MouseScrollDelta::PixelDelta(pos) => pos.y as f32, // trackpad: actual pixels
+                };
+                self.scroll -= dy;
+                self.scroll = self.scroll.max(0.0);
+
+                if let Some(window) = &self.window {
+                    window.request_redraw();
+                }
+            },
+
             _ => {}
         }
     }
@@ -74,7 +88,7 @@ impl App {
         buffer.fill(BACKGROUND);
         let width = size.width as usize;
         let size_px = 32.0;
-        let mut baseline: i32 = 60;
+        let mut baseline: i32 = 60 - self.scroll as i32;
         let mut cursor_x: f32 = 20.0;
         let height = size.height as usize;
         let line_height = self.font.horizontal_line_metrics(size_px).unwrap().new_line_size;
@@ -105,7 +119,9 @@ impl App {
                         let color = (gray << 16) | (gray << 8) | gray;
 
                         let x = left + gx;
-                        let y = top as usize + gy;
+                        let y = top + gy as i32;        // stay in i32, can be negative now
+                        if y < 0 { continue; }          // above the window: skip this pixel
+                        let y = y as usize;             // safe to convert now
                         if x < width && y < height {
                             buffer[y * width + x] = color;
                         }
@@ -128,6 +144,6 @@ pub fn run(text: String) {
     let font = fontdue::Font::from_bytes(font_bytes, fontdue::FontSettings::default()).unwrap();    
 
     let event_loop = EventLoop::new().unwrap();
-    let mut app = App { text, font, window: None, surface: None };
+    let mut app = App { text, font, window: None, surface: None, scroll: 0.0 };
     event_loop.run_app(&mut app).unwrap();
 }
