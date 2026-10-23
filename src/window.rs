@@ -1,5 +1,6 @@
 use std::num::NonZeroU32;
 use std::rc::Rc;
+use std::collections::HashMap;
 
 use softbuffer::{Context, Surface};
 use winit::application::ApplicationHandler;
@@ -16,6 +17,7 @@ const BACKGROUND: u32 = 0x00FF_FFFF; // white
 struct App {
     text: String, // the page text from milestone 1; drawn in milestone 2b
     font: fontdue::Font,
+    glyph_cache: HashMap<char, (fontdue::Metrics, Vec<u8>)>,
     window: Option<Rc<Window>>,
     surface: Option<Surface<Rc<Window>, Rc<Window>>>,
     scroll: f32,
@@ -94,11 +96,11 @@ impl App {
         let line_height = self.font.horizontal_line_metrics(size_px).unwrap().new_line_size;
         let space_width = self.font.metrics(' ', size_px).advance_width;
         
-        for word in self.text.split_whitespace() {
+        'words: for word in self.text.split_whitespace() {
             let mut word_width = 0.0;
             for character in word.chars() {
-                let metrics = self.font.metrics(character, size_px);
-                word_width += metrics.advance_width
+                let (metrics, _) = self.glyph_cache.entry(character).or_insert_with(|| self.font.rasterize(character, size_px));
+                word_width += metrics.advance_width;
             }
 
             let word_exceeds_width = cursor_x + word_width >= width as f32 - 20.0;
@@ -108,26 +110,33 @@ impl App {
             }
             
             for character in word.chars() {
-                let (metrics, bitmap) = self.font.rasterize(character, size_px);
+                let (metrics, bitmap) = self.glyph_cache.entry(character).or_insert_with(|| self.font.rasterize(character, size_px));
                 let top = baseline - metrics.height as i32 - metrics.ymin;
                 let left = (cursor_x + metrics.xmin as f32).round() as usize;
 
-                for gy in 0..metrics.height {                   // each row of the letter
-                    for gx in 0..metrics.width {                // each pixel in that row
-                        let coverage = bitmap[gy * metrics.width + gx] as u32;
-                        let gray = 255 - coverage;
-                        let color = (gray << 16) | (gray << 8) | gray;
+                // below the window: everything after this is too, so stop completely
+                if top >= height as i32 {
+                    break 'words;
+                }
+                
+                // only draw if the letter is not fully above the window
+                if top + metrics.height as i32 > 0 {
+                    for gy in 0..metrics.height {                   // each row of the letter
+                        for gx in 0..metrics.width {                // each pixel in that row
+                            let coverage = bitmap[gy * metrics.width + gx] as u32;
+                            let gray = 255 - coverage;
+                            let color = (gray << 16) | (gray << 8) | gray;
 
-                        let x = left + gx;
-                        let y = top + gy as i32;        // stay in i32, can be negative now
-                        if y < 0 { continue; }          // above the window: skip this pixel
-                        let y = y as usize;             // safe to convert now
-                        if x < width && y < height {
-                            buffer[y * width + x] = color;
+                            let x = left + gx;
+                            let y = top + gy as i32;        // stay in i32, can be negative now
+                            if y < 0 { continue; }          // above the window: skip this pixel
+                            let y = y as usize;             // safe to convert now
+                            if x < width && y < height {
+                                buffer[y * width + x] = color;
+                            }
                         }
                     }
                 }
-
                 cursor_x += metrics.advance_width; 
             }
 
@@ -142,8 +151,9 @@ impl App {
 pub fn run(text: String) {
     let font_bytes = include_bytes!("../fonts/Play-Regular.ttf") as &[u8];
     let font = fontdue::Font::from_bytes(font_bytes, fontdue::FontSettings::default()).unwrap();    
+    let glyph_cache = HashMap::new();
 
     let event_loop = EventLoop::new().unwrap();
-    let mut app = App { text, font, window: None, surface: None, scroll: 0.0 };
+    let mut app = App { text, font, glyph_cache, window: None, surface: None, scroll: 0.0 };
     event_loop.run_app(&mut app).unwrap();
 }
