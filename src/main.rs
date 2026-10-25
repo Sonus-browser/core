@@ -2,7 +2,7 @@
 //!
 //! Usage: cargo run -- https://example.org
 mod window;
-mod tokenizer;
+mod html;
 
 use std::collections::HashMap;
 use std::error::Error;
@@ -173,7 +173,7 @@ fn main() -> Result<()> {
         .unwrap_or_else(|| "https://example.org/".to_string());
     let url = Url::parse(&input)?;
     let (_headers, body) = url.request()?;
-    for token in tokenizer::tokenize(&body) {
+    for token in html::tokenizer::tokenize(&body) {
         println!("{:?}", token);
     }
 
