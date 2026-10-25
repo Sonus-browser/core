@@ -89,7 +89,6 @@ fn parse_tag(tag: &str) -> (String, HashMap<String, String>) {
 
 pub fn tokenize(html: &str) -> Vec<Token> {
     let mut in_tag = false;
-    let mut in_hidden_tag = false;
     let mut tag = String::new();
     let mut tokens = Vec::new();
     let mut text = String::new();
@@ -103,15 +102,8 @@ pub fn tokenize(html: &str) -> Vec<Token> {
                 in_tag = true;
                 tag.clear();
             }
-            '>' => {
+            '>' if in_tag => {
                 in_tag = false;
-                let name = tag.split_whitespace().next().unwrap_or("");
-                if name == "style" || name == "script" {
-                    in_hidden_tag = true;
-                }
-                if name == "/style" || name == "/script" {
-                    in_hidden_tag = false;
-                }
                 if tag.starts_with('!') {
                     // We dont do anything
                 } else if let Some(rest) = tag.strip_prefix('/') {
@@ -123,9 +115,7 @@ pub fn tokenize(html: &str) -> Vec<Token> {
             }
             _ if in_tag => tag.push(c),
             _ => {
-                if !in_hidden_tag {
-                    text.push(c);
-                };
+                text.push(c);
             }
         }
     }

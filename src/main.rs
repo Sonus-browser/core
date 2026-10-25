@@ -144,6 +144,8 @@ fn main() -> Result<()> {
     let tree = html::tree::build(tokens);
     let mut text = String::new();
 
+    println!("{:#?}", tree);
+
     html::tree::collect_text(&tree, &mut text);
     window::run(text);
     Ok(())
