@@ -173,9 +173,9 @@ fn main() -> Result<()> {
         .unwrap_or_else(|| "https://example.org/".to_string());
     let url = Url::parse(&input)?;
     let (_headers, body) = url.request()?;
-    for token in html::tokenizer::tokenize(&body) {
-        println!("{:?}", token);
-    }
+    let tokens = html::tokenizer::tokenize(&body);
+    let tree = html::tree::build(tokens);
+    println!("{:#?}", tree);
 
     let text = show(&body);
     window::run(text);
