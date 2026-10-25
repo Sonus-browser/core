@@ -140,6 +140,7 @@ fn main() -> Result<()> {
     let url = Url::parse(&input)?;
     let (_headers, body) = url.request()?;
     let tokens = html::tokenizer::tokenize(&body);
+
     let tree = html::tree::build(tokens);
     let mut text = String::new();
 

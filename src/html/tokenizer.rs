@@ -1,3 +1,4 @@
+use super::entities::decode_entities;
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -64,7 +65,7 @@ fn parse_tag(tag: &str) -> (String, HashMap<String, String>) {
             }
             Mode::QuotedValue => {
                 if c == quote {
-                    attributes.insert(std::mem::take(&mut attr_name), std::mem::take(&mut attr_value));
+                    attributes.insert(std::mem::take(&mut attr_name), decode_entities(&std::mem::take(&mut attr_value)));
                     mode = Mode::BetweenAttrs;
                 } else {
                     attr_value.push(c);
@@ -72,7 +73,7 @@ fn parse_tag(tag: &str) -> (String, HashMap<String, String>) {
             }
             Mode::UnquotedValue => {
                 if c.is_whitespace() {
-                    attributes.insert(std::mem::take(&mut attr_name), std::mem::take(&mut attr_value));
+                    attributes.insert(std::mem::take(&mut attr_name), decode_entities(&std::mem::take(&mut attr_value)));
                     mode = Mode::BetweenAttrs;
                 } else {
                     attr_value.push(c);
@@ -80,7 +81,7 @@ fn parse_tag(tag: &str) -> (String, HashMap<String, String>) {
             }}
     }
     if !attr_name.is_empty() {
-        attributes.insert(attr_name, attr_value);
+        attributes.insert(attr_name, decode_entities(&attr_value));
     }
 
     (name, attributes)
@@ -97,7 +98,7 @@ pub fn tokenize(html: &str) -> Vec<Token> {
         match c {
             '<' => {
                 if !text.is_empty() {
-                    tokens.push(Token::Text(std::mem::take(&mut text)));
+                    tokens.push(Token::Text(decode_entities(&std::mem::take(&mut text))));
                 }
                 in_tag = true;
                 tag.clear();
@@ -129,7 +130,7 @@ pub fn tokenize(html: &str) -> Vec<Token> {
         }
     }
     if !text.is_empty() {
-        tokens.push(Token::Text(std::mem::take(&mut text)));
+         tokens.push(Token::Text(decode_entities(&std::mem::take(&mut text))));
     }
 
     tokens
