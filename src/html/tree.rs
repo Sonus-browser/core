@@ -52,3 +52,20 @@ pub fn build(tokens: Vec<Token>) -> Node {
 
     stack.pop().unwrap()
 }
+
+pub fn collect_text(node: &Node, out: &mut String) {
+    match node {
+        Node::Text(text) => {
+            out.push_str(text);
+            out.push(' ');
+        }
+        Node::Element { name, children } => {
+            if matches!(name.as_str(), "head" | "script" | "style") {
+                return;
+            }            
+            for child in children {
+                collect_text(child, out);
+            }
+        }
+    }
+}

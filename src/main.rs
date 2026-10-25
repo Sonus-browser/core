@@ -133,40 +133,6 @@ fn parse_response(raw: &[u8]) -> Result<(HashMap<String, String>, String)> {
     Ok((headers, body))
 }
 
-/// Return the text after parsing
-fn show(body: &str) -> String {
-    let mut in_tag = false;
-    let mut in_hidden_tag = false;
-    let mut tag = String::new();
-    let mut out = String::new();
-
-    for c in body.chars() {
-        match c {
-            '<' => {
-                in_tag = true;
-                tag.clear();
-            }
-            '>' => {
-                in_tag = false;
-                let name = tag.split_whitespace().next().unwrap_or("");
-                if name == "style" || name == "script" {
-                    in_hidden_tag = true;
-                }
-                if name == "/style" || name == "/script" {
-                    in_hidden_tag = false;
-                }
-            }
-            _ if in_tag => tag.push(c),
-            _ => {
-                if !in_hidden_tag {
-                    out.push(c)
-                };
-            }
-        }
-    }
-    out
-}
-
 fn main() -> Result<()> {
     let input = std::env::args()
         .nth(1)
@@ -175,9 +141,9 @@ fn main() -> Result<()> {
     let (_headers, body) = url.request()?;
     let tokens = html::tokenizer::tokenize(&body);
     let tree = html::tree::build(tokens);
-    println!("{:#?}", tree);
+    let mut text = String::new();
 
-    let text = show(&body);
+    html::tree::collect_text(&tree, &mut text);
     window::run(text);
     Ok(())
 }
