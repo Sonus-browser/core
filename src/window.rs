@@ -16,6 +16,7 @@ struct PlacedGlyph {
     character: char,
     top: i32,
     left: usize,
+    size: u32,
 }
 
 /// Everything the app needs to remember between events.
@@ -23,7 +24,7 @@ struct PlacedGlyph {
 struct App {
     text: String, // the page text from milestone 1; drawn in milestone 2b
     font: fontdue::Font,
-    glyph_cache: HashMap<char, (fontdue::Metrics, Vec<u8>)>,
+    glyph_cache: HashMap<(char, u32), (fontdue::Metrics, Vec<u8>)>,
     window: Option<Rc<Window>>,
     surface: Option<Surface<Rc<Window>, Rc<Window>>>,
     scroll: f32,
@@ -110,7 +111,7 @@ impl App {
             for character in word.chars() {
                 let (metrics, _) = self
                     .glyph_cache
-                    .entry(character)
+                    .entry((character, size_px as u32))
                     .or_insert_with(|| self.font.rasterize(character, size_px));
                 word_width += metrics.advance_width;
             }
@@ -124,7 +125,7 @@ impl App {
             for character in word.chars() {
                 let (metrics, _) = self
                     .glyph_cache
-                    .entry(character)
+                    .entry((character, size_px as u32))
                     .or_insert_with(|| self.font.rasterize(character, size_px));
                 let top = baseline - metrics.height as i32 - metrics.ymin;
                 let left = (cursor_x + metrics.xmin as f32).round() as usize;
@@ -133,6 +134,7 @@ impl App {
                     character,
                     top,
                     left,
+                    size: size_px as u32,
                 });
 
                 cursor_x += metrics.advance_width;
@@ -162,7 +164,7 @@ impl App {
         let scroll = self.scroll as i32;
 
         for glyph in &self.glyphs {
-            let (metrics, bitmap) = self.glyph_cache.get(&glyph.character).unwrap();
+            let (metrics, bitmap) = self.glyph_cache.get(&(glyph.character, glyph.size)).unwrap();
             let top = glyph.top - scroll;
             if top >= height as i32 {
                 break;
