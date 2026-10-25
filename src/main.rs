@@ -150,7 +150,7 @@ fn main() -> Result<()> {
     html::tree::collect_css(&tree, &mut styling);
     
     let rules = css::parser::parse(&styling);
-    css::matching::apply_styles(&mut tree, &rules);
+    css::matching::apply_styles(&mut tree, &rules, &HashMap::new());
 
     println!("{:#?}", tree);
     println!("{:#?}", rules);
