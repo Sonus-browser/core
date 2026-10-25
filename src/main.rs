@@ -1,8 +1,8 @@
 //! Milestone 1: fetch a page over a raw socket (our own HTTP) and print its text.
 //!
 //! Usage: cargo run -- https://example.org
-mod window;
 mod html;
+mod window;
 
 use std::collections::HashMap;
 use std::error::Error;

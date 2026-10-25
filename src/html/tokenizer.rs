@@ -1,8 +1,89 @@
+use std::collections::HashMap;
+
 #[derive(Debug)]
 pub enum Token {
-    Opening(String),
+    Opening {
+        name: String,
+        attributes: HashMap<String, String>,
+    },
     Closing(String),
     Text(String),
+}
+
+enum Mode {
+    TagName,
+    BetweenAttrs,
+    AttrName,
+    ValueStart,
+    QuotedValue,
+    UnquotedValue,
+}
+
+fn parse_tag(tag: &str) -> (String, HashMap<String, String>) {
+    let mut mode = Mode::TagName;
+    let mut name = String::new();
+    let mut attr_name = String::new();
+    let mut attr_value = String::new();
+    let mut quote = '"';
+    let mut attributes = HashMap::new();
+
+    for c in tag.chars() {
+        match mode {
+            Mode::TagName => {
+                if c.is_whitespace() {
+                    mode = Mode::BetweenAttrs;
+                } else {
+                    name.push(c); 
+                }
+            }
+            Mode::BetweenAttrs => {
+                if !c.is_whitespace() {
+                    attr_name.push(c);
+                    mode = Mode::AttrName;
+                }
+            }
+            Mode::AttrName => {
+                if c == '=' {
+                    mode = Mode::ValueStart;
+                } else if c.is_whitespace() {
+                    attributes.insert(std::mem::take(&mut attr_name), String::new());
+                    mode = Mode::BetweenAttrs;
+                } else {
+                    // still reading the name
+                     attr_name.push(c);
+                }
+            }
+            Mode::ValueStart => {
+                if c == '"' || c == '\'' {
+                    quote = c;
+                    mode = Mode::QuotedValue;
+                } else {
+                    attr_value.push(c);
+                    mode = Mode::UnquotedValue;
+                }
+            }
+            Mode::QuotedValue => {
+                if c == quote {
+                    attributes.insert(std::mem::take(&mut attr_name), std::mem::take(&mut attr_value));
+                    mode = Mode::BetweenAttrs;
+                } else {
+                    attr_value.push(c);
+                }
+            }
+            Mode::UnquotedValue => {
+                if c.is_whitespace() {
+                    attributes.insert(std::mem::take(&mut attr_name), std::mem::take(&mut attr_value));
+                    mode = Mode::BetweenAttrs;
+                } else {
+                    attr_value.push(c);
+                }
+            }}
+    }
+    if !attr_name.is_empty() {
+        attributes.insert(attr_name, attr_value);
+    }
+
+    (name, attributes)
 }
 
 pub fn tokenize(html: &str) -> Vec<Token> {
@@ -16,7 +97,7 @@ pub fn tokenize(html: &str) -> Vec<Token> {
         match c {
             '<' => {
                 if !text.is_empty() {
-                   tokens.push(Token::Text(std::mem::take(&mut text)));
+                    tokens.push(Token::Text(std::mem::take(&mut text)));
                 }
                 in_tag = true;
                 tag.clear();
@@ -35,7 +116,8 @@ pub fn tokenize(html: &str) -> Vec<Token> {
                 } else if let Some(rest) = tag.strip_prefix('/') {
                     tokens.push(Token::Closing(rest.to_string()));
                 } else {
-                    tokens.push(Token::Opening(name.to_string()));
+                    let (name, attributes) = parse_tag(&tag);
+                    tokens.push(Token::Opening { name, attributes });
                 }
             }
             _ if in_tag => tag.push(c),

@@ -1,10 +1,10 @@
+use std::collections::HashMap;
 use std::num::NonZeroU32;
 use std::rc::Rc;
-use std::collections::HashMap;
 
 use softbuffer::{Context, Surface};
 use winit::application::ApplicationHandler;
-use winit::event::{ElementState, KeyEvent, WindowEvent, MouseScrollDelta};
+use winit::event::{ElementState, KeyEvent, MouseScrollDelta, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, EventLoop};
 use winit::keyboard::{Key, NamedKey};
 use winit::window::{Window, WindowId};
@@ -66,14 +66,14 @@ impl ApplicationHandler for App {
                 if let Some(window) = &self.window {
                     window.request_redraw();
                 };
-            },
+            }
 
             // The OS asks us to draw (on startup, after a resize, ...)
             WindowEvent::RedrawRequested => self.paint(),
 
             WindowEvent::MouseWheel { delta, .. } => {
                 let dy = match delta {
-                    MouseScrollDelta::LineDelta(_, y) => y * 40.0,   // mouse wheel: counted in "lines"
+                    MouseScrollDelta::LineDelta(_, y) => y * 40.0, // mouse wheel: counted in "lines"
                     MouseScrollDelta::PixelDelta(pos) => pos.y as f32, // trackpad: actual pixels
                 };
                 self.scroll -= dy;
@@ -84,7 +84,7 @@ impl ApplicationHandler for App {
                     self.scroll = self.scroll.max(0.0);
                     window.request_redraw();
                 }
-            },
+            }
 
             _ => {}
         }
@@ -99,12 +99,19 @@ impl App {
         let mut baseline: i32 = 60;
         let mut cursor_x: f32 = 20.0;
         let space_width = self.font.metrics(' ', size_px).advance_width;
-        let line_height = self.font.horizontal_line_metrics(size_px).unwrap().new_line_size;
+        let line_height = self
+            .font
+            .horizontal_line_metrics(size_px)
+            .unwrap()
+            .new_line_size;
 
         for word in self.text.split_whitespace() {
             let mut word_width = 0.0;
             for character in word.chars() {
-                let (metrics, _) = self.glyph_cache.entry(character).or_insert_with(|| self.font.rasterize(character, size_px));
+                let (metrics, _) = self
+                    .glyph_cache
+                    .entry(character)
+                    .or_insert_with(|| self.font.rasterize(character, size_px));
                 word_width += metrics.advance_width;
             }
 
@@ -113,15 +120,22 @@ impl App {
                 cursor_x = 20.0;
                 baseline += line_height.round() as i32;
             }
-            
+
             for character in word.chars() {
-                let (metrics, _) = self.glyph_cache.entry(character).or_insert_with(|| self.font.rasterize(character, size_px));
+                let (metrics, _) = self
+                    .glyph_cache
+                    .entry(character)
+                    .or_insert_with(|| self.font.rasterize(character, size_px));
                 let top = baseline - metrics.height as i32 - metrics.ymin;
                 let left = (cursor_x + metrics.xmin as f32).round() as usize;
 
-                self.glyphs.push(PlacedGlyph { character, top, left });
-            
-                cursor_x += metrics.advance_width; 
+                self.glyphs.push(PlacedGlyph {
+                    character,
+                    top,
+                    left,
+                });
+
+                cursor_x += metrics.advance_width;
             }
             cursor_x += space_width;
         }
@@ -153,11 +167,11 @@ impl App {
             if top >= height as i32 {
                 break;
             }
-    
+
             // fully above the window: skip this letter
             if top + metrics.height as i32 <= 0 {
                 continue;
-             }
+            }
 
             for gy in 0..metrics.height {
                 for gx in 0..metrics.width {
@@ -167,26 +181,37 @@ impl App {
 
                     let x = glyph.left + gx;
                     let y = top + gy as i32;
-                    if y < 0 { continue; }
+                    if y < 0 {
+                        continue;
+                    }
                     let y = y as usize;
                     if x < width && y < height {
                         buffer[y * width + x] = color;
                     }
                 }
-            }   
+            }
         }
 
         buffer.present().unwrap();
     }
 }
 
-    /// Open a window showing `text`. Blocks until the window is closed.
+/// Open a window showing `text`. Blocks until the window is closed.
 pub fn run(text: String) {
     let font_bytes = include_bytes!("../fonts/Play-Regular.ttf") as &[u8];
-    let font = fontdue::Font::from_bytes(font_bytes, fontdue::FontSettings::default()).unwrap();    
+    let font = fontdue::Font::from_bytes(font_bytes, fontdue::FontSettings::default()).unwrap();
     let glyph_cache = HashMap::new();
     let glyphs = Vec::new();
     let event_loop = EventLoop::new().unwrap();
-    let mut app = App { text, font, glyph_cache, window: None, surface: None, scroll: 0.0, glyphs, page_height: 0 };
+    let mut app = App {
+        text,
+        font,
+        glyph_cache,
+        window: None,
+        surface: None,
+        scroll: 0.0,
+        glyphs,
+        page_height: 0,
+    };
     event_loop.run_app(&mut app).unwrap();
 }

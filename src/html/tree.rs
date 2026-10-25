@@ -1,15 +1,34 @@
 use super::tokenizer::Token;
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub enum Node {
-    Element { name: String, children: Vec<Node> },
+    Element {
+        name: String,
+        attributes: HashMap<String, String>,
+        children: Vec<Node>,
+    },
     Text(String),
 }
 
 fn is_void(name: &str) -> bool {
-    matches!(name, "meta" | "link" | "br" | "img" | "input" | "hr" | "area" | "base" | "col" | "embed" | "source" | "track" | "wbr")
+    matches!(
+        name,
+        "meta"
+            | "link"
+            | "br"
+            | "img"
+            | "input"
+            | "hr"
+            | "area"
+            | "base"
+            | "col"
+            | "embed"
+            | "source"
+            | "track"
+            | "wbr"
+    )
 }
-
 
 fn add_child(stack: &mut Vec<Node>, child: Node) {
     if let Some(Node::Element { children, .. }) = stack.last_mut() {
@@ -22,23 +41,35 @@ fn close_top(stack: &mut Vec<Node>) {
     add_child(stack, finished);
 }
 
-
 pub fn build(tokens: Vec<Token>) -> Node {
     // start with an invisible root, so there's always something "below"
-    let mut stack = vec![Node::Element { name: "document".to_string(), children: Vec::new() }];
+    let mut stack = vec![Node::Element {
+        name: "document".to_string(),
+        attributes: HashMap::new(),
+        children: Vec::new(),
+    }];
 
     for token in tokens {
         match token {
-            Token::Opening(name) => {
+            Token::Opening { name, attributes } => {
                 if !is_void(&name) {
-                    stack.push(Node::Element { name, children: Vec::new() });
+                    stack.push(Node::Element {
+                        name,
+                        attributes,
+                        children: Vec::new(),
+                    });
                 } else {
-                     add_child(&mut stack, Node::Element { name, children: Vec::new() });
+                    add_child(
+                        &mut stack,
+                        Node::Element {
+                            name,
+                            attributes,
+                            children: Vec::new(),
+                        },
+                    );
                 }
             }
-            Token::Text(text) => {
-                add_child(&mut stack, Node::Text(text))
-            }
+            Token::Text(text) => add_child(&mut stack, Node::Text(text)),
             Token::Closing(_) => {
                 if stack.len() > 1 {
                     close_top(&mut stack);
@@ -59,10 +90,14 @@ pub fn collect_text(node: &Node, out: &mut String) {
             out.push_str(text);
             out.push(' ');
         }
-        Node::Element { name, children } => {
+        Node::Element {
+            name,
+            attributes,
+            children,
+        } => {
             if matches!(name.as_str(), "head" | "script" | "style") {
                 return;
-            }            
+            }
             for child in children {
                 collect_text(child, out);
             }
