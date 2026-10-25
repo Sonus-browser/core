@@ -104,3 +104,24 @@ pub fn collect_text(node: &Node, out: &mut String) {
         }
     }
 }
+
+pub fn collect_css(node: &Node, out: &mut String) {
+    match node {
+        Node::Text(_) => {}
+        Node::Element {
+            name,
+            children,
+            ..
+        } => {
+            if name == "style" {
+                for child in children {
+                    collect_text(child, out);
+                }
+            } else {
+                for child in children {
+                    collect_css(child, out);
+                }
+            }
+        }
+    }
+}

@@ -144,13 +144,17 @@ fn main() -> Result<()> {
 
     let tree = html::tree::build(tokens);
     let mut text = String::new();
+    let mut styling = String::new();
 
-    let rules = css::parser::parse("body { margin: auto; padding: 2em } p { color: red; }");
-    println!("{:#?}", rules);
 
-    println!("{:#?}", tree);
+    //println!("{:#?}", tree);
 
     html::tree::collect_text(&tree, &mut text);
+    html::tree::collect_css(&tree, &mut styling);
+    
+    let rules = css::parser::parse(&styling);
+
+    println!("{:#?}", rules);
     window::run(text);
     Ok(())
 }
