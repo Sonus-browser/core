@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct Rule {
-    pub selector: String,
+    pub selector: Vec<Selector>,
     pub declarations: HashMap<String, String>,
 }
 
@@ -10,6 +10,29 @@ enum Mode {
     Selector,
     Property,
     Value,
+}
+
+#[derive(Debug)]
+pub enum Selector {
+    Tag(String),
+    Class(String),
+    Id(String),
+}
+
+pub fn parse_selectors(text: &str) -> Vec<Selector> {
+    let split_text = text.split(',');
+    let mut selectors = Vec::new();
+    for selector in split_text {
+        let selector = selector.trim();
+        if let Some(rest) = selector.strip_prefix('.') {
+            selectors.push(Selector::Class(rest.to_string()));
+        } else if let Some(rest) = selector.strip_prefix('#') {
+            selectors.push(Selector::Id(rest.to_string()));
+        } else {
+            selectors.push(Selector::Tag(selector.to_string()));
+        }
+    }
+    selectors
 }
 
 pub fn parse(css: &str) -> Vec<Rule> {
@@ -33,7 +56,8 @@ pub fn parse(css: &str) -> Vec<Rule> {
                 if c == ':' {
                     mode = Mode::Value;
                 } else if c == '}' {
-                    rules.push(Rule { selector: selector.trim().to_string(), declarations: std::mem::take(&mut declarations) });
+
+                    rules.push(Rule { selector: parse_selectors(&selector), declarations: std::mem::take(&mut declarations) });
                     selector.clear();
                     mode = Mode::Selector;
                 } else {
@@ -41,7 +65,6 @@ pub fn parse(css: &str) -> Vec<Rule> {
                 }
             }
             Mode::Value => {
-                /* TODO: ';' → store declaration, Property; '}' → store both, Selector; else collect */
                 if c == ';' {
                     declarations.insert(property.trim().to_string(), value.trim().to_string());
                     property.clear();
@@ -49,7 +72,7 @@ pub fn parse(css: &str) -> Vec<Rule> {
                     mode = Mode::Property;
                 } else if c == '}' {
                     declarations.insert(property.trim().to_string(), value.trim().to_string());
-                    rules.push(Rule { selector: selector.trim().to_string(), declarations: std::mem::take(&mut declarations) });
+                    rules.push(Rule { selector: parse_selectors(&selector), declarations: std::mem::take(&mut declarations) });
                     property.clear();
                     value.clear();
                     selector.clear();
