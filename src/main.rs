@@ -2,6 +2,7 @@
 //!
 //! Usage: cargo run -- https://example.org
 mod window;
+mod tokenizer;
 
 use std::collections::HashMap;
 use std::error::Error;
@@ -172,6 +173,10 @@ fn main() -> Result<()> {
         .unwrap_or_else(|| "https://example.org/".to_string());
     let url = Url::parse(&input)?;
     let (_headers, body) = url.request()?;
+    for token in tokenizer::tokenize(&body) {
+        println!("{:?}", token);
+    }
+
     let text = show(&body);
     window::run(text);
     Ok(())
