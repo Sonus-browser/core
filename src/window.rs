@@ -2,6 +2,8 @@ use std::collections::HashMap;
 use std::num::NonZeroU32;
 use std::rc::Rc;
 
+use crate::html::tree::Node;
+
 use softbuffer::{Context, Surface};
 use winit::application::ApplicationHandler;
 use winit::event::{ElementState, KeyEvent, MouseScrollDelta, WindowEvent};
@@ -22,7 +24,7 @@ struct PlacedGlyph {
 /// Everything the app needs to remember between events.
 /// The window only exists after the event loop starts, hence the Options.
 struct App {
-    text: String, // the page text from milestone 1; drawn in milestone 2b
+    document: Node, // the page text from milestone 1; drawn in milestone 2b
     font: fontdue::Font,
     glyph_cache: HashMap<(char, u32), (fontdue::Metrics, Vec<u8>)>,
     window: Option<Rc<Window>>,
@@ -94,6 +96,8 @@ impl ApplicationHandler for App {
 
 impl App {
     fn layout(&mut self, width: usize) {
+        let mut text = String::new();
+        crate::html::tree::collect_text(&self.document, &mut text);
         self.glyphs.clear();
 
         let size_px = 32.0;
@@ -106,7 +110,7 @@ impl App {
             .unwrap()
             .new_line_size;
 
-        for word in self.text.split_whitespace() {
+        for word in text.split_whitespace() {
             let mut word_width = 0.0;
             for character in word.chars() {
                 let (metrics, _) = self
@@ -199,14 +203,14 @@ impl App {
 }
 
 /// Open a window showing `text`. Blocks until the window is closed.
-pub fn run(text: String) {
+pub fn run(document: Node) {
     let font_bytes = include_bytes!("../fonts/Play-Regular.ttf") as &[u8];
     let font = fontdue::Font::from_bytes(font_bytes, fontdue::FontSettings::default()).unwrap();
     let glyph_cache = HashMap::new();
     let glyphs = Vec::new();
     let event_loop = EventLoop::new().unwrap();
     let mut app = App {
-        text,
+        document,
         font,
         glyph_cache,
         window: None,

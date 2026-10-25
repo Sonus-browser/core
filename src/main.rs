@@ -143,10 +143,8 @@ fn main() -> Result<()> {
     let tokens = html::tokenizer::tokenize(&body);
 
     let mut tree = html::tree::build(tokens);
-    let mut text = String::new();
     let mut styling = String::new();
 
-    html::tree::collect_text(&tree, &mut text);
     html::tree::collect_css(&tree, &mut styling);
     
     let rules = css::parser::parse(&styling);
@@ -154,6 +152,6 @@ fn main() -> Result<()> {
 
     println!("{:#?}", tree);
     println!("{:#?}", rules);
-    window::run(text);
+    window::run(tree);
     Ok(())
 }
