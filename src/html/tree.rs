@@ -6,6 +6,7 @@ pub enum Node {
     Element {
         name: String,
         attributes: HashMap<String, String>,
+        styles: HashMap<String, String>,
         children: Vec<Node>,
     },
     Text(String),
@@ -46,6 +47,7 @@ pub fn build(tokens: Vec<Token>) -> Node {
     let mut stack = vec![Node::Element {
         name: "document".to_string(),
         attributes: HashMap::new(),
+        styles: HashMap::new(),
         children: Vec::new(),
     }];
 
@@ -56,6 +58,7 @@ pub fn build(tokens: Vec<Token>) -> Node {
                     stack.push(Node::Element {
                         name,
                         attributes,
+                        styles: HashMap::new(),
                         children: Vec::new(),
                     });
                 } else {
@@ -64,6 +67,7 @@ pub fn build(tokens: Vec<Token>) -> Node {
                         Node::Element {
                             name,
                             attributes,
+                            styles: HashMap::new(),
                             children: Vec::new(),
                         },
                     );
@@ -92,8 +96,8 @@ pub fn collect_text(node: &Node, out: &mut String) {
         }
         Node::Element {
             name,
-            attributes,
             children,
+            ..
         } => {
             if matches!(name.as_str(), "head" | "script" | "style") {
                 return;

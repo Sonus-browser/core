@@ -142,18 +142,17 @@ fn main() -> Result<()> {
     let (_headers, body) = url.request()?;
     let tokens = html::tokenizer::tokenize(&body);
 
-    let tree = html::tree::build(tokens);
+    let mut tree = html::tree::build(tokens);
     let mut text = String::new();
     let mut styling = String::new();
-
-
-    //println!("{:#?}", tree);
 
     html::tree::collect_text(&tree, &mut text);
     html::tree::collect_css(&tree, &mut styling);
     
     let rules = css::parser::parse(&styling);
+    css::matching::apply_styles(&mut tree, &rules);
 
+    println!("{:#?}", tree);
     println!("{:#?}", rules);
     window::run(text);
     Ok(())

@@ -1,4 +1,4 @@
-use super::parser::Selector;
+use super::parser::{Rule, Selector};
 use crate::html::tree::Node;
 
 pub fn matches(selector: &Selector, node: &Node) -> bool {
@@ -17,3 +17,56 @@ pub fn matches(selector: &Selector, node: &Node) -> bool {
     }
 }
 
+fn specificity(selector: &Selector) -> u32 {
+    match selector {
+        Selector::Tag(..) => 1,
+        Selector::Class(..) => 10,
+        Selector::Id(..) => 100,
+    }
+}
+
+pub fn apply_styles(node: &mut Node, rules: &[Rule]) {
+    if let Node::Text(_) = node {
+        return;
+    }
+
+    let mut matching: Vec<(u32, &Rule)> = Vec::new();
+
+    for rule in rules {
+        let mut best: Option<u32> = None;
+
+        for selector in &rule.selector {
+            if matches(selector, node) {
+                // TODO: update best with specificity(selector), if it's higher
+                let value = specificity(selector);
+                if Some(value) > best {
+                    best = Some(value);
+                }
+
+            }
+        }
+
+        // TODO: if best has a value → push (that value, rule) into matching
+        if let Some(value) = best {
+            matching.push((value, rule));
+        }
+    }
+
+    matching.sort_by_key(|(spec, _)| *spec);
+
+    if let Node::Element { styles, children, .. } = node {
+    // TODO 4: for each (_, rule) in &matching:
+    //           for each (property, value) in &rule.declarations:
+    //             insert into styles
+    // TODO 5: for each child in children: apply_styles on it
+        for (_, rule) in &matching {
+            for (property, value) in &rule.declarations {
+                styles.insert(property.clone(), value.clone());
+            }
+        }
+
+        for child in children {
+            apply_styles(child, rules);
+        }
+    }
+}
