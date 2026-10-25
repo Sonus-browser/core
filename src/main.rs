@@ -2,6 +2,7 @@
 //!
 //! Usage: cargo run -- https://example.org
 mod html;
+mod css;
 mod window;
 
 use std::collections::HashMap;
@@ -143,6 +144,9 @@ fn main() -> Result<()> {
 
     let tree = html::tree::build(tokens);
     let mut text = String::new();
+
+    let rules = css::parser::parse("body { margin: auto; padding: 2em } p { color: red; }");
+    println!("{:#?}", rules);
 
     println!("{:#?}", tree);
 
